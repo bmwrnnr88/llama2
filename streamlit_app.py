@@ -45,16 +45,23 @@ def generate_llama2_response(prompt_input):
     # Customized character prompt
     character_prompt = "You are Professor Bot, a knowledgeable and friendly educational assistant."
 
-    string_dialogue = character_prompt
-    for dict_message in st.session_state.messages:
-        if dict_message["role"] == "user":
-            string_dialogue += "Student: " + dict_message["content"] + "\n\n"
-        else:
-            string_dialogue += "Professor Bot: " + dict_message["content"] + "\n\n"
-    
+    # Construct the dialogue with only the last user message and last bot message
+    dialogue_history = []
+    if len(st.session_state.messages) > 1:
+        # Get the last user message
+        last_user_message = [msg for msg in st.session_state.messages if msg["role"] == "user"][-1]
+        dialogue_history.append("Student: " + last_user_message["content"])
+
+        # Get the last bot message
+        last_bot_message = [msg for msg in st.session_state.messages if msg["role"] == "assistant"][-1]
+        dialogue_history.append("Professor Bot: " + last_bot_message["content"])
+
+    # Combine the character prompt, dialogue history, and current user input
+    string_dialogue = character_prompt + "\n\n" + "\n\n".join(dialogue_history) + "\n\nStudent: " + prompt_input
+
     # Calling the LLaMA model with the constructed dialogue
     output = replicate.run('a16z-infra/llama13b-v2-chat:df7690f1994d94e96ad9d568eac121aecf50684a0b0963b25a41cc40061269e5', 
-                           input={"prompt": f"{string_dialogue} {prompt_input} Professor Bot: ",
+                           input={"prompt": f"{string_dialogue} Professor Bot: ",
                                   "temperature":0.1, "top_p":0.9, "max_length":512, "repetition_penalty":1})
     return output
 
